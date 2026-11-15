@@ -1,6 +1,10 @@
 import unittest
 
-from downloader import format_duration, validate_youtube_url
+from downloader import (
+    _youtube_compatibility_options,
+    format_duration,
+    validate_youtube_url,
+)
 
 
 class ValidateYoutubeUrlTests(unittest.TestCase):
@@ -34,6 +38,18 @@ class FormatDurationTests(unittest.TestCase):
 
     def test_unknown(self) -> None:
         self.assertEqual(format_duration(None), "")
+
+
+class YoutubeCompatibilityTests(unittest.TestCase):
+    def test_cloud_fallback_clients_are_enabled(self) -> None:
+        options = _youtube_compatibility_options()
+        clients = options["extractor_args"]["youtube"]["player_client"]
+
+        self.assertEqual(options["source_address"], "0.0.0.0")
+        self.assertIn("default", clients)
+        self.assertIn("web_music", clients)
+        self.assertIn("web_safari", clients)
+        self.assertTrue(options["js_runtimes"])
 
 
 if __name__ == "__main__":

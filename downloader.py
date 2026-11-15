@@ -67,6 +67,25 @@ def _javascript_runtimes() -> dict[str, dict[str, str]]:
         return {"node": {}}
 
 
+def _youtube_compatibility_options() -> dict[str, Any]:
+    """Use extra official clients when the cloud host rejects the defaults."""
+    return {
+        "js_runtimes": _javascript_runtimes(),
+        "source_address": "0.0.0.0",
+        "extractor_args": {
+            "youtube": {
+                "player_client": [
+                    "default",
+                    "web_music",
+                    "web_safari",
+                    "android_vr",
+                    "tv_simply",
+                ]
+            }
+        },
+    }
+
+
 def validate_youtube_url(url: str) -> str:
     if not url:
         raise ValueError("Wklej link do utworu albo playlisty.")
@@ -105,7 +124,7 @@ def inspect_media(url: str, max_items: int = 100) -> MediaInspection:
         "extract_flat": "in_playlist",
         "playlistend": max_items + 1,
         "noplaylist": False,
-        "js_runtimes": _javascript_runtimes(),
+        **_youtube_compatibility_options(),
     }
 
     try:
@@ -229,7 +248,7 @@ def download_audio(
         "concurrent_fragment_downloads": 4,
         "retries": 3,
         "fragment_retries": 3,
-        "js_runtimes": _javascript_runtimes(),
+        **_youtube_compatibility_options(),
         "final_ext": "mp3",
         "postprocessors": [
             {
