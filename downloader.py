@@ -57,6 +57,16 @@ class QuietLogger:
             self.warnings.append(message)
 
 
+def _javascript_runtimes() -> dict[str, dict[str, str]]:
+    """Prefer the bundled Deno binary and fall back to a system Node runtime."""
+    try:
+        import deno
+
+        return {"deno": {"path": str(deno.find_deno_bin())}}
+    except (ImportError, OSError, RuntimeError):
+        return {"node": {}}
+
+
 def validate_youtube_url(url: str) -> str:
     if not url:
         raise ValueError("Wklej link do utworu albo playlisty.")
@@ -95,7 +105,7 @@ def inspect_media(url: str, max_items: int = 100) -> MediaInspection:
         "extract_flat": "in_playlist",
         "playlistend": max_items + 1,
         "noplaylist": False,
-        "js_runtimes": {"node": {}},
+        "js_runtimes": _javascript_runtimes(),
     }
 
     try:
@@ -219,7 +229,7 @@ def download_audio(
         "concurrent_fragment_downloads": 4,
         "retries": 3,
         "fragment_retries": 3,
-        "js_runtimes": {"node": {}},
+        "js_runtimes": _javascript_runtimes(),
         "final_ext": "mp3",
         "postprocessors": [
             {
@@ -245,7 +255,7 @@ def download_audio(
 
     files = sorted(output_dir.rglob("*.mp3"))
     if not files:
-        details = logger.warnings[-1] if logger.warnings else "brak dostępnego audio"
+        details = "\n".join(logger.warnings[-20:]) or "brak dostępnego audio"
         raise DownloadServiceError(_friendly_error(details))
 
     progress_callback(1.0, "Gotowe.")
@@ -268,6 +278,28 @@ def _friendly_error(error: object) -> str:
     lowered = message.lower()
     if "ffmpeg" in lowered or "ffprobe" in lowered:
         return "Brakuje FFmpeg/FFprobe albo program nie jest dostępny w PATH."
+    if "no supported javascript runtime" in lowered or "javascript runtime" in lowered:
+        return (
+            "Na serwerze brakuje zgodnego środowiska JavaScript potrzebnego przez YouTube. "
+            "Sprawdź instalację Deno i ponownie uruchom aplikację."
+        )
+    if (
+        "confirm you're not a bot" in lowered
+        or "confirm you’re not a bot" in lowered
+        or "http error 403" in lowered
+        or "http error 429" in lowered
+        or "too many requests" in lowered
+    ):
+        return (
+            "YouTube zablokował połączenie z serwera Streamlit (ochrona przed botami "
+            "lub limit zapytań). Ten sam link może działać lokalnie, ale publiczne adresy "
+            "IP Streamlit Cloud bywają blokowane przez YouTube."
+        )
+    if "confirm your age" in lowered or "age-restricted" in lowered:
+        return (
+            "Dostępne pozycje tej playlisty wymagają zalogowania i potwierdzenia wieku. "
+            "Ta aplikacja pobiera tylko materiały dostępne bez logowania."
+        )
     if "sign in" in lowered or "login" in lowered or "cookies" in lowered:
         return (
             "Ten materiał wymaga logowania albo potwierdzenia przez YouTube. "

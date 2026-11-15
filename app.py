@@ -143,6 +143,7 @@ if submitted:
             f"Znaleziono: **{media.title}** · "
             f"{media.item_count} {'utwór' if media.item_count == 1 else 'utworów'}"
         )
+        progress.progress(0.01, text="Rozpoczynam pobieranie dostępnych utworów…")
 
         if media.items:
             preview = []
